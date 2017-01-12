@@ -1,0 +1,40 @@
+---
+- name: clustering | get cluster status
+  command: rabbitmqctl cluster_status
+  register: rmqctl_cluster_status
+  changed_when: rmqctl_cluster_status.rc != 0
+
+- name: clustering | get node name
+  command: rabbitmqctl eval 'node().'
+  register: rmqctl_node
+  changed_when: rmqctl_node.rc != 0
+
+- name: clustering | parse cluster status
+  set_fact:
+    rabbitmq_current_cluster_name: "{{ rmqctl_cluster_status.stdout | regex_search('{cluster_name,<<\"(.*?)\">>}', '\\1') | first }}"
+    rabbitmq_current_running_nodes: "{{ rmqctl_cluster_status.stdout | regex_search(\"{running_nodes,\\['?(.*?)'?\\]}\", '\\1') | first }}"
+    rabbitmq_current_nodename: "{{ rmqctl_node.stdout | replace(\"'\", '') }}"
+
+- block:
+  - name: clustering | stop_app
+    command: rabbitmqctl stop_app
+
+  - name: clustering | join_cluster
+    command: rabbitmqctl join_cluster {{ rabbitmq_cluster_master_node }} {{ '--ram' if rabbitmq_cluster_node_type == 'ram' else '' }}
+    register: rmq_join_cluster_result
+    ignore_errors: yes
+
+  - name: clustering | start_app
+    command: rabbitmqctl start_app
+
+  - name: clustering | fail if join_cluster failed
+    fail:
+      msg: failed to join cluster
+    when: rmq_join_cluster_result.rc !=0
+
+  when: not (rabbitmq_current_nodename == rabbitmq_cluster_master_node
+      or rabbitmq_current_nodename in rabbitmq_current_running_nodes and rabbitmq_current_cluster_name == rabbitmq_cluster_name)
+
+- name: clustering | set cluster name
+  command: rabbitmqctl set_cluster_name {{ rabbitmq_cluster_name }}
+  when: rabbitmq_cluster_name != rabbitmq_current_cluster_name

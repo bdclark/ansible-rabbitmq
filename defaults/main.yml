@@ -1,0 +1,66 @@
+---
+# override erlang package name and/or version
+rabbitmq_erlang_package_name: ~
+# set specific rabbitmq-server package version (e.g. 3.6.6)
+rabbitmq_package_version: ~
+
+rabbitmq_default_user: guest
+rabbitmq_default_pass: guest
+
+# List of users which are only permitted to connect to the broker via
+# loopback interface (i.e. localhost). If you wish to allow the default
+# guest user to connect remotely, you need to change this to [].
+rabbitmq_loopback_users:
+  - guest
+
+rabbitmq_disk_free_limit: ~
+rabbitmq_disk_free_limit_relative: ~
+rabbitmq_vm_memory_high_watermark: ~
+
+rabbitmq_ssl_enabled: no
+rabbitmq_ssl_port: 5671
+rabbitmq_ssl_verify: verify_none
+rabbitmq_ssl_fail_if_no_peer_cert: yes
+rabbitmq_ssl_key_path: /etc/rabbitmq/ssl/key.pem
+rabbitmq_ssl_cert_path: /etc/rabbitmq/ssl/cert.pem
+rabbitmq_ssl_cacert_path: /etc/rabbitmq/ssl/cacert.pem
+# ssl key/cert content
+rabbitmq_ssl_key_content: ~
+rabbitmq_ssl_cert_content: ~
+rabbitmq_ssl_cacert_content: ~
+
+# rabbitmq-env... if nil, rabbitmq defaults will be used
+rabbitmq_nodename: ~
+rabbitmq_address: ~
+rabbitmq_port: 5672
+rabbitmq_use_longname: ~
+rabbitmq_env_additional: [] # env-file lines
+
+# /etc/default/rabbitmq settings
+rabbitmq_open_file_limit: ~
+
+# cluster mode... supports None (disabled), `manual`, or `auto`
+rabbitmq_cluster_mode: ~
+# generic cluster settings
+rabbitmq_erlang_cookie: AnyAlphaNumericStringWillDo
+rabbitmq_erlang_cookie_path: /var/lib/rabbitmq/.erlang.cookie
+rabbitmq_cluster_partition_handling: ignore
+# list of nodes for rabbitmq.config in `auto` mode
+rabbitmq_auto_cluster_nodes: []
+# cluster settings for `manual` mode
+rabbitmq_cluster_master_node: ~
+rabbitmq_cluster_name: "{{ rabbitmq_cluster_master_node }}"
+rabbitmq_cluster_node_type: ~
+
+# management plugin settings
+rabbitmq_management_plugin_enabled: yes
+rabbitmq_management_ssl_enabled: no
+rabbitmq_managment_port: 15672
+rabbitmq_management_ssl_port: 15671
+# rabbitmq_admin_cli_enabled: yes
+# rabbitmq_admin_cli_dir: /usr/local/bin
+
+# template names
+rabbitmq_config_template: rabbitmq.config.j2
+rabbitmq_env_template: rabbitmq-env.conf.j2
+rabbitmq_default_template: default.rabbitmq-server.j2

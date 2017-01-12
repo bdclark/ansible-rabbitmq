@@ -1,0 +1,17 @@
+# This file managed by Ansible. Changes will be overwritten.
+
+{% if rabbitmq_address %}
+NODE_IP_ADDRESS={{ rabbitmq_node_ip_address }}
+{% endif %}
+{% if rabbitmq_port %}
+NODE_PORT={{ rabbitmq_port }}
+{% endif %}
+{% if rabbitmq_nodename %}
+NODENAME={{ rabbitmq_nodename }}
+{% endif %}
+{% if rabbitmq_use_longname %}
+USE_LONGNAME={{ rabbitmq_use_longname | bool | lower }}
+{% endif %}
+{% for line in rabbitmq_env_additional %}
+{{ line }}
+{% endfor %}

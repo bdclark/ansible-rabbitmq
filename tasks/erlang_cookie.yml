@@ -1,0 +1,29 @@
+---
+- name: stop rabbitmq-server to update erlang cookie
+  service:
+    name: rabbitmq-server
+    state: stopped
+
+- name: update erlang cookie
+  copy:
+    content: "{{ rabbitmq_erlang_cookie }}"
+    dest: "{{ rabbitmq_erlang_cookie_path }}"
+    owner: rabbitmq
+    group: rabbitmq
+    mode: 0400
+
+- name: start rabbitmq-server
+  service:
+    name: rabbitmq-server
+    state: started
+
+- name: wait for rabbitmq
+  wait_for:
+    port: "{{ rabbitmq_port }}"
+
+- name: reset rabbitmq
+  command: "{{ item }}"
+  with_items:
+    - rabbitmqctl stop_app
+    - rabbitmqctl reset
+    - rabbitmqctl start_app

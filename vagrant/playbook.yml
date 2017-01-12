@@ -1,0 +1,21 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    rabbitmq_loopback_users: []
+    rabbitmq_cluster_mode: manual
+    rabbitmq_cluster_master_node: rabbit@machine1
+    rabbitmq_cluster_name: my_cluster
+
+  pre_tasks:
+    - name: manage hosts file
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ hostvars[item]['ansible_eth1']['ipv4']['address'] }} {{item}}"
+        state: present
+      when: hostvars[item]['ansible_eth1']['ipv4']['address'] is defined
+      with_items: "{{ groups['all'] }}"
+
+  roles:
+    - rabbitmq

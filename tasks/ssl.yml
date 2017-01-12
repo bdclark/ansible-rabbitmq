@@ -1,0 +1,25 @@
+---
+- name: ensure rabbitmq ssl directory
+  file:
+    dest: /etc/rabbitmq/ssl
+    state: directory
+    owner: root
+    group: rabbitmq
+    mode: 0750
+
+- name: write rabbitmq ssl cert/key files
+  copy:
+    content: "{{ item.content }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: rabbitmq
+    mode: 0640
+  no_log: yes
+  with_items:
+    - content: "{{ rabbitmq_ssl_cert_content }}"
+      dest: "{{ rabbitmq_ssl_cert_path }}"
+    - content: "{{ rabbitmq_ssl_key_content }}"
+      dest: "{{ rabbitmq_ssl_key_path }}"
+    - content: "{{ rabbitmq_ssl_cacert_content }}"
+      dest: "{{ rabbitmq_ssl_cacert_path }}"
+  notify: restart rabbitmq

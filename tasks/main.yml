@@ -1,0 +1,79 @@
+---
+- assert:
+    that: rabbitmq_cluster_mode in [None, 'manual', 'auto']
+
+- assert:
+    that: rabbitmq_auto_cluster_nodes | length > 1
+    msg: rabbitmq_auto_cluster_nodes cluser mode is auto
+  when: rabbitmq_cluster_mode == 'auto'
+
+- assert:
+    that: rabbitmq_cluster_master_node and rabbitmq_cluster_master_node | length > 1
+    msg: rabbitmq_cluster_master_node must be set when cluster mode is manual
+  when: rabbitmq_cluster_mode == 'manual'
+
+- include: "{{ ansible_os_family }}/install.yml"
+
+- include: ssl.yml
+  when: rabbitmq_ssl_enabled and rabbitmq_ssl_key_content and rabbitmq_ssl_cert_content and rabbitmq_ssl_cacert_content
+
+- name: write rabbitmq.config file
+  template:
+    src: "{{ rabbitmq_config_template }}"
+    dest: /etc/rabbitmq/rabbitmq.config
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart rabbitmq
+
+- name: write rabbitmq-env.conf file
+  template:
+    src: "{{ rabbitmq_env_template }}"
+    dest: /etc/rabbitmq/rabbitmq-env.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart rabbitmq
+
+- name: write rabbitmq service defaults file
+  template:
+    src: "{{ rabbitmq_default_template }}"
+    dest: /etc/default/rabbitmq-server
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart rabbitmq
+
+- name: stat existing erlang cookie
+  stat:
+    path: "{{ rabbitmq_erlang_cookie_path }}"
+  register: erlang_cookie_stat
+
+- include: erlang_cookie.yml
+  when: rabbitmq_cluster_mode != None and (
+    not erlang_cookie_stat.stat.exists
+    or (erlang_cookie_stat.stat.exists and erlang_cookie_stat.stat.checksum != rabbitmq_erlang_cookie|hash('sha1')))
+
+- name: manage rabbitmq service
+  service:
+    name: rabbitmq-server
+    state: started
+    enabled: yes
+
+- name: enable management plugin
+  rabbitmq_plugin:
+    name: rabbitmq_management
+    state: "{{ rabbitmq_management_plugin_enabled | ternary('enabled', 'disabled') }}"
+
+- include: cluster.yml
+  when: rabbitmq_cluster_mode == 'manual'
+
+# - name: download rabbitmqadmin
+#   get_url:
+#     url: "{{ item.scheme }}://localhost:{{ item.port }}/cli/rabbitmqadmin"
+#     dest: "{{ rabbitmq_admin_cli_dir}}/rabbitmqadmin"
+#     mode: 0755
+#   with_items:
+#     - scheme: "{{ 'https' if rabbitmq_management_ssl_enabled else 'http' }}"
+#       port: "{{ rabbitmq_management_ssl_port if rabbitmq_management_ssl_enabled else rabbitmq_managment_port }}"
+#   when: rabbitmq_management_plugin_enabled and rabbitmq_admin_cli_enabled
