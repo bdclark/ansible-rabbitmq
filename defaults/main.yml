@@ -21,10 +21,7 @@ rabbitmq_ssl_enabled: no
 rabbitmq_ssl_port: 5671
 rabbitmq_ssl_verify: verify_none
 rabbitmq_ssl_fail_if_no_peer_cert: yes
-rabbitmq_ssl_key_path: /etc/rabbitmq/ssl/key.pem
-rabbitmq_ssl_cert_path: /etc/rabbitmq/ssl/cert.pem
-rabbitmq_ssl_cacert_path: /etc/rabbitmq/ssl/cacert.pem
-# ssl key/cert content
+# ssl key/cert content... will be written to /etc/rabbitmq/ssl if all are set
 rabbitmq_ssl_key_content: ~
 rabbitmq_ssl_cert_content: ~
 rabbitmq_ssl_cacert_content: ~

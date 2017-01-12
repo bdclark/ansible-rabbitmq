@@ -14,7 +14,31 @@
 
 - include: "{{ ansible_os_family }}/install.yml"
 
-- include: ssl.yml
+- block:
+    - name: ensure rabbitmq ssl directory
+      file:
+        dest: /etc/rabbitmq/ssl
+        state: directory
+        owner: root
+        group: rabbitmq
+        mode: 0750
+
+    - name: write rabbitmq ssl cert/key files
+      copy:
+        content: "{{ item.content }}"
+        dest: /etc/rabbitmq/ssl/{{ item.dest }}
+        owner: root
+        group: rabbitmq
+        mode: 0640
+      no_log: yes
+      with_items:
+        - content: "{{ rabbitmq_ssl_cert_content }}"
+          dest: cert.pem
+        - content: "{{ rabbitmq_ssl_key_content }}"
+          dest: key.pem
+        - content: "{{ rabbitmq_ssl_cacert_content }}"
+          dest: cacert.pem
+      notify: restart rabbitmq
   when: rabbitmq_ssl_enabled and rabbitmq_ssl_key_content and rabbitmq_ssl_cert_content and rabbitmq_ssl_cacert_content
 
 - name: write rabbitmq.config file
