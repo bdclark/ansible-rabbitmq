@@ -4,11 +4,6 @@
   register: rmqctl_cluster_status
   changed_when: rmqctl_cluster_status.rc != 0
 
-- name: clustering | get node name
-  command: rabbitmqctl eval 'node().'
-  register: rmqctl_node
-  changed_when: rmqctl_node.rc != 0
-
 - name: clustering | parse cluster status
   set_fact:
     rabbitmq_current_cluster_name: "{{ rmqctl_cluster_status.stdout | regex_search('{cluster_name,<<\"(.*?)\">>}', '\\1') | first }}"

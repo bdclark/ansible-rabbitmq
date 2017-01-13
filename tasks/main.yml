@@ -89,8 +89,48 @@
     name: rabbitmq_management
     state: "{{ rabbitmq_management_plugin_enabled | ternary('enabled', 'disabled') }}"
 
+- block:
+  - meta: flush_handlers
+
+  - name: get node name
+    command: rabbitmqctl eval 'node().'
+    register: rmqctl_node
+    changed_when: rmqctl_node.rc != 0
+
+  - name: parse node name
+    set_fact:
+      rabbitmq_current_nodename: "{{ rmqctl_node.stdout | replace(\"'\", '') }}"
+
+  when: rabbitmq_cluster_mode == 'manual'
+    or rabbitmq_vhosts | length > 1
+    or rabbitmq_users | length > 1
+
 - include: cluster.yml
   when: rabbitmq_cluster_mode == 'manual'
+
+- name: manage vhosts
+  rabbitmq_vhost:
+    name: "{{ item.name }}"
+    node: "{{ item.node | default(rabbitmq_current_nodename) }}"
+    state: "{{ item.state | default(omit) }}"
+    tracing: "{{ item.tracing | default(omit) }}"
+  with_items: "{{ rabbitmq_vhosts }}"
+
+- name: manage users
+  rabbitmq_user:
+    configure_priv: "{{ item.configure_priv | default(omit) }}"
+    force: "{{ item.force | default(omit) }}"
+    node: "{{ item.node | default(rabbitmq_current_nodename) }}"
+    password: "{{ item.password | default(omit) }}"
+    permissions: "{{ item.permissions | default(omit) }}"
+    read_priv: "{{ item.read_priv | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+    tags: "{{ item.tags | default(omit) }}"
+    user: "{{ item.user | default(item.name) }}"
+    vhost: "{{ item.vhost | default(omit) }}"
+    write_priv: "{{ item.write_priv | default(omit) }}"
+  with_items: "{{ rabbitmq_users }}"
+  no_log: true
 
 # - name: download rabbitmqadmin
 #   get_url:

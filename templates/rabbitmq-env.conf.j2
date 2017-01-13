@@ -6,8 +6,10 @@ NODE_IP_ADDRESS={{ rabbitmq_node_ip_address }}
 {% if rabbitmq_port %}
 NODE_PORT={{ rabbitmq_port }}
 {% endif %}
-{% if rabbitmq_nodename %}
+{% if rabbitmq_nodename and '@' in rabbitmq_nodename %}
 NODENAME={{ rabbitmq_nodename }}
+{% elif rabbitmq_nodename %}
+NODENAME={{ rabbitmq_nodename }}@{{ ansible_hostname }}
 {% endif %}
 {% if rabbitmq_use_longname %}
 USE_LONGNAME={{ rabbitmq_use_longname | bool | lower }}

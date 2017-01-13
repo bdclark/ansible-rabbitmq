@@ -82,3 +82,18 @@ describe command('rabbitmqctl cluster_status') do
   its(:exit_status) { should eql 0 }
   its(:stdout) { should contain '{cluster_name,<<"rabbits">>}' }
 end
+
+describe command('rabbitmqctl list_vhosts') do
+  its(:exit_status) { should eql 0}
+  its(:stdout) { should contain 'vhost1' }
+end
+
+describe command('rabbitmqctl list_permissions') do
+  its(:exit_status) { should eql 0 }
+  its(:stdout) { should match /^admin1\s\.\*\s\.\*\s\.\*/ }
+end
+
+describe command('rabbitmqctl list_permissions -p vhost1') do
+  its(:exit_status) { should eql 0 }
+  its(:stdout) { should match /^user1\s\.\*\s\.\*\s\.\*/ }
+end

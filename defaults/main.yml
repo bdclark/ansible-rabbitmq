@@ -57,6 +57,11 @@ rabbitmq_management_ssl_port: 15671
 # rabbitmq_admin_cli_enabled: yes
 # rabbitmq_admin_cli_dir: /usr/local/bin
 
+# list of users... see rabbitmq_user docs for available parameters
+rabbitmq_users: []
+# list of vhosts... rabbitmq_vhost docs for available parameters
+rabbitmq_vhosts: []
+
 # template names
 rabbitmq_config_template: rabbitmq.config.j2
 rabbitmq_env_template: rabbitmq-env.conf.j2
