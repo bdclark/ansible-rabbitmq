@@ -5,7 +5,7 @@
       {port, {{ rabbitmq_management_ssl_port }}},
       {ssl, true},
       {ssl_opts, [
-        {cacertfile, "etc/rabbitmq/ssl/cacert.pem"},
+        {cacertfile, "/etc/rabbitmq/ssl/cacert.pem"},
         {certfile, "/etc/rabbitmq/ssl/cert.pem"},
         {keyfile, "/etc/rabbitmq/ssl/key.pem"}
       ]}
@@ -22,7 +22,7 @@
 {% if rabbitmq_ssl_enabled %}
     {ssl_listeners, [{{ rabbitmq_ssl_port }}]},
     {ssl_options, [
-      {cacertfile, "etc/rabbitmq/ssl/cacert.pem"},
+      {cacertfile, "/etc/rabbitmq/ssl/cacert.pem"},
       {certfile, "/etc/rabbitmq/ssl/cert.pem"},
       {keyfile, "/etc/rabbitmq/ssl/key.pem"},
       {verify, {{ rabbitmq_ssl_verify }}},
