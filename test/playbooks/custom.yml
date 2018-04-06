@@ -1,6 +1,6 @@
 ---
-- hosts: test-kitchen
-  remote_user: root
+- hosts: all
+  become: yes
   vars:
     rabbitmq_default_user: admin
     rabbitmq_default_pass: admin
@@ -10,12 +10,12 @@
     rabbitmq_disk_free_limit: 50MB
     rabbitmq_vm_memory_high_watermark: 0.5
 
-    rabbitmq_nodename: hare
+    rabbitmq_nodename: hare@vagrant
     rabbitmq_port: 5673
     rabbitmq_open_file_limit: 50000
 
     rabbitmq_cluster_mode: manual
-    rabbitmq_cluster_master_node: hare
+    rabbitmq_cluster_master_node: hare@vagrant
     rabbitmq_cluster_name: rabbits
 
     rabbitmq_management_plugin_enabled: yes
