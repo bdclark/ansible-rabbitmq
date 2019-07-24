@@ -1,4 +1,6 @@
-# rabbitmq
+# RabbitMQ Ansible Role
+
+[![Build Status](https://travis-ci.org/bdclark/ansible-rabbitmq.svg?branch=master)](https://travis-ci.org/bdclark/ansible-rabbitmq)
 
 Installs/configures RabbitMQ
 
