@@ -1,0 +1,11 @@
+---
+_rabbitmq_default_repo: "https://dl.bintray.com/rabbitmq/rpm/rabbitmq-server/v{{ (rabbitmq_version | string).split('.')[0:2] | join('.') }}\
+  .x/el/{{ (ansible_distribution == 'Amazon') | ternary('7', ansible_distribution_major_version) }}"
+
+_rabbitmq_default_erlang_repo: "https://dl.bintray.com/rabbitmq-erlang/rpm/erlang/{{ (rabbitmq_erlang_version | string).split('.')[0] }}\
+  /el/{{ (ansible_distribution == 'Amazon') | ternary('7', ansible_distribution_major_version) }}"
+
+_rabbitmq_default_erlang_packages:
+  - erlang
+
+_rabbitmq_package_list_cmd: rpm --query -a --queryformat '%{NAME}\n'

@@ -1,0 +1,59 @@
+---
+- hosts: rabbitmq
+  become: true
+  vars:
+    rabbitmq_erlang_cookie: 'abcd1234'
+    rabbitmq_env_config:
+      NODENAME: rabbit@{{ ansible_eth1.ipv4.address }}
+      USE_LONGNAME: 'true'
+    rabbitmq_config:
+      loopback_users: none
+      cluster_formation.peer_discovery_backend: rabbit_peer_discovery_consul
+      cluster_formation.consul.svc_addr_auto: 'true'
+      cluster_formation.consul.svc_addr_nic: eth1
+      cluster_formation.consul.svc_addr_use_nodename: 'false'
+      cluster_formation.consul.use_longname: 'true'
+      cluster_partition_handling: autoheal
+      log.file.level: debug
+    rabbitmq_offline_plugins:
+      - name: rabbitmq_management
+      - name: rabbitmq_peer_discovery_consul
+  tasks:
+    - name: install rabbitmq
+      import_role:
+        name: rabbitmq
+
+    - name: flush handlers
+      meta: flush_handlers
+
+    - name: wait for rabbitmq
+      wait_for:
+        port: 5672
+
+- hosts: rabbit1
+  become: true
+  tasks:
+    - name: pause for 10 seconds
+      pause:
+        seconds: 5
+
+    - name: get cluster status
+      command: rabbitmqctl cluster_status --formatter json
+      register: _cluster_status_cmd
+      changed_when: false
+
+    - name: parse cluster status
+      set_fact:
+        cluster_status: "{{ _cluster_status_cmd.stdout | from_json }}"
+
+    - name: show cluster status
+      debug:
+        var: cluster_status
+
+    - name: assert cluster has 3 running nodes
+      assert:
+        that: "{{ cluster_status.running_nodes | length == 3 }}"
+
+    - name: assert cluster has no partitions
+      assert:
+        that: "{{ cluster_status.partitions | length == 0 }}"

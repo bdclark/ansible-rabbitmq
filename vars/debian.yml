@@ -1,0 +1,26 @@
+---
+_rabbitmq_default_repo: deb https://dl.bintray.com/rabbitmq/debian {{ ansible_distribution_release }} main
+
+_rabbitmq_default_erlang_repo: "deb https://dl.bintray.com/rabbitmq-erlang/debian {{ ansible_distribution_release }} \
+  erlang-{{ (rabbitmq_erlang_version | string).split('.')[0] }}.x"
+
+_rabbitmq_default_erlang_packages:
+  - erlang-asn1
+  - erlang-base
+  - erlang-crypto
+  - erlang-eldap
+  - erlang-ftp
+  - erlang-inets
+  - erlang-mnesia
+  - erlang-os-mon
+  - erlang-parsetools
+  - erlang-public-key
+  - erlang-runtime-tools
+  - erlang-snmp
+  - erlang-ssl
+  - erlang-syntax-tools
+  - erlang-tftp
+  - erlang-tools
+  - erlang-xmerl
+
+_rabbitmq_package_list_cmd: dpkg-query --show --showformat='${Package}\t${db:Status-Status}\n' | grep 'installed$' | cut -f1

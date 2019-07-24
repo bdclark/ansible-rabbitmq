@@ -1,143 +1,95 @@
 ---
-- assert:
-    that: rabbitmq_cluster_mode in [None, 'manual', 'auto']
+- name: assert valid rabbitmq version
+  assert:
+    that:
+      - (rabbitmq_version | string).split('.') | length >= 1
+      - (rabbitmq_version | string).split('.') | length <= 3
+    fail_msg: rabbitmq_version must be in format X.X or X.X.X
 
-- assert:
-    that: rabbitmq_auto_cluster_nodes | length > 1
-    msg: rabbitmq_auto_cluster_nodes cluser mode is auto
-  when: rabbitmq_cluster_mode == 'auto'
+- name: assert valid rabbitmq erlang version
+  assert:
+    that:
+      - (rabbitmq_erlang_version | string).split('.') | length >= 1
+      - (rabbitmq_erlang_version | string).split('.') | length <= 4
+    fail_msg: rabbitmq_erlang_version version must be in format X, X.X, X.X.X, or X.X.X.X
 
-- assert:
-    that: rabbitmq_cluster_master_node and rabbitmq_cluster_master_node | length > 1
-    msg: rabbitmq_cluster_master_node must be set when cluster mode is manual
-  when: rabbitmq_cluster_mode == 'manual'
+- name: assert valid service state
+  assert:
+    that: rabbitmq_service_state in ['started', 'stopped']
+    fail_msg: rabbitmq_service state must be 'started' or 'stopped'
+  when: rabbitmq_manage_service | bool
 
-- include: "{{ ansible_os_family }}/install.yml"
+- name: include os-specific variables
+  include_vars: "{{ ansible_os_family | lower }}.yml"
 
-- block:
-    - name: ensure rabbitmq ssl directory
-      file:
-        dest: /etc/rabbitmq/ssl
-        state: directory
-        owner: root
-        group: rabbitmq
-        mode: 0750
+- name: get installed packages
+  shell: "{{ _rabbitmq_package_list_cmd }}"  # noqa 305
+  changed_when: false
+  register: _rabbitmq_installed_packages
 
-    - name: write rabbitmq ssl cert/key files
-      copy:
-        content: "{{ item.content }}"
-        dest: /etc/rabbitmq/ssl/{{ item.dest }}
-        owner: root
-        group: rabbitmq
-        mode: 0640
-      no_log: yes
-      with_items:
-        - content: "{{ rabbitmq_ssl_cert_content }}"
-          dest: cert.pem
-        - content: "{{ rabbitmq_ssl_key_content }}"
-          dest: key.pem
-        - content: "{{ rabbitmq_ssl_cacert_content }}"
-          dest: cacert.pem
-      notify: restart rabbitmq
-  when: rabbitmq_ssl_enabled and rabbitmq_ssl_key_content and rabbitmq_ssl_cert_content and rabbitmq_ssl_cacert_content
+- name: mask rabbitmq-server service unit (before initial install)
+  file:
+    src: /dev/null
+    dest: /etc/systemd/system/rabbitmq-server.service
+    state: link
+  when: not 'rabbitmq-server' in _rabbitmq_installed_packages.stdout_lines
 
-- name: write rabbitmq.config file
+- include: "install_{{ ansible_os_family | lower }}.yml"
+
+- name: set erlang cookie (on initial install)
+  copy:
+    content: "{{ rabbitmq_erlang_cookie }}"
+    dest: "{{ rabbitmq_erlang_cookie_path }}"
+    owner: rabbitmq
+    group: rabbitmq
+    mode: 0400
+  no_log: true
+  when:
+    - not 'rabbitmq-server' in _rabbitmq_installed_packages.stdout_lines
+    - rabbitmq_erlang_cookie is not none
+    - rabbitmq_erlang_cookie | string | length > 0
+
+- name: enable offline plugins
+  command: "rabbitmq-plugins --offline {{ item.action | default('enable') }} {{ item.name }}"
+  with_items: "{{ rabbitmq_offline_plugins }}"
+  register: _plugin_result
+  changed_when: "'changes will take effect at broker restart.' in _plugin_result.stdout"
+  notify: restart rabbitmq
+
+- name: un-mask rabbitmq-server service unit
+  file:
+    path: /etc/systemd/system/rabbitmq-server.service
+    state: absent
+  register: _rabbitmq_unmask_systemd_unit
+
+- name: reload systemd
+  systemd:
+    daemon_reload: true  # noqa 503
+  when: _rabbitmq_unmask_systemd_unit.changed | bool
+
+- name: write rabbitmq.conf file
   template:
-    src: "{{ rabbitmq_config_template }}"
-    dest: /etc/rabbitmq/rabbitmq.config
+    src: rabbitmq.conf.j2
+    dest: /etc/rabbitmq/rabbitmq.conf
     owner: root
     group: root
     mode: 0644
+  when: rabbitmq_manage_config | bool
   notify: restart rabbitmq
 
 - name: write rabbitmq-env.conf file
   template:
-    src: "{{ rabbitmq_env_template }}"
+    src: rabbitmq-env.conf.j2
     dest: /etc/rabbitmq/rabbitmq-env.conf
     owner: root
     group: root
     mode: 0644
+  when: rabbitmq_manage_config | bool
   notify: restart rabbitmq
-
-- name: write rabbitmq service defaults file
-  template:
-    src: "{{ rabbitmq_default_template }}"
-    dest: /etc/default/rabbitmq-server
-    owner: root
-    group: root
-    mode: 0644
-  notify: restart rabbitmq
-
-- name: stat existing erlang cookie
-  stat:
-    path: "{{ rabbitmq_erlang_cookie_path }}"
-  register: erlang_cookie_stat
-
-- include: erlang_cookie.yml
-  when: rabbitmq_cluster_mode != None and (
-    not erlang_cookie_stat.stat.exists
-    or (erlang_cookie_stat.stat.exists and erlang_cookie_stat.stat.checksum != rabbitmq_erlang_cookie|hash('sha1')))
 
 - name: manage rabbitmq service
   service:
     name: rabbitmq-server
-    state: started
-    enabled: yes
-
-- name: enable management plugin
-  rabbitmq_plugin:
-    name: rabbitmq_management
-    state: "{{ rabbitmq_management_plugin_enabled | ternary('enabled', 'disabled') }}"
-
-- block:
-  - meta: flush_handlers
-
-  - name: get node name
-    command: rabbitmqctl eval 'node().'
-    register: rmqctl_node
-    changed_when: rmqctl_node.rc != 0
-
-  - name: parse node name
-    set_fact:
-      rabbitmq_current_nodename: "{{ rmqctl_node.stdout | replace(\"'\", '') }}"
-
-  when: rabbitmq_cluster_mode == 'manual'
-    or rabbitmq_vhosts | length > 1
-    or rabbitmq_users | length > 1
-
-- include: cluster.yml
-  when: rabbitmq_cluster_mode == 'manual'
-
-- name: manage vhosts
-  rabbitmq_vhost:
-    name: "{{ item.name }}"
-    node: "{{ item.node | default(rabbitmq_current_nodename) }}"
-    state: "{{ item.state | default(omit) }}"
-    tracing: "{{ item.tracing | default(omit) }}"
-  with_items: "{{ rabbitmq_vhosts }}"
-
-- name: manage users
-  rabbitmq_user:
-    configure_priv: "{{ item.configure_priv | default(omit) }}"
-    force: "{{ item.force | default(omit) }}"
-    node: "{{ item.node | default(rabbitmq_current_nodename) }}"
-    password: "{{ item.password | default(omit) }}"
-    permissions: "{{ item.permissions | default(omit) }}"
-    read_priv: "{{ item.read_priv | default(omit) }}"
-    state: "{{ item.state | default('present') }}"
-    tags: "{{ item.tags | default(omit) }}"
-    user: "{{ item.user | default(item.name) }}"
-    vhost: "{{ item.vhost | default(omit) }}"
-    write_priv: "{{ item.write_priv | default(omit) }}"
-  with_items: "{{ rabbitmq_users }}"
-  no_log: true
-
-# - name: download rabbitmqadmin
-#   get_url:
-#     url: "{{ item.scheme }}://localhost:{{ item.port }}/cli/rabbitmqadmin"
-#     dest: "{{ rabbitmq_admin_cli_dir}}/rabbitmqadmin"
-#     mode: 0755
-#   with_items:
-#     - scheme: "{{ 'https' if rabbitmq_management_ssl_enabled else 'http' }}"
-#       port: "{{ rabbitmq_management_ssl_port if rabbitmq_management_ssl_enabled else rabbitmq_managment_port }}"
-#   when: rabbitmq_management_plugin_enabled and rabbitmq_admin_cli_enabled
+    state: "{{ rabbitmq_service_state }}"
+    enabled: "{{ rabbitmq_service_enabled | bool }}"
+  when: rabbitmq_manage_service | bool

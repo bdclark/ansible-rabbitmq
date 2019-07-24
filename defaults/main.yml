@@ -1,68 +1,56 @@
 ---
-# override erlang package name and/or version
-rabbitmq_erlang_package_name: ~
-# set specific rabbitmq-server package version (e.g. 3.6.6)
-rabbitmq_package_version: ~
+# version of rabbitmq-server to install
+## must include at least major and minor version, and may optionally include patch
+## e.g. '3.7' or '3.7.7' are valid versions
+rabbitmq_version: '3.7'
 
-rabbitmq_default_user: guest
-rabbitmq_default_pass: guest
+# URL to GPG signing key
+rabbitmq_gpg_key_url: https://dl.bintray.com/rabbitmq/Keys/rabbitmq-release-signing-key.asc
+# repo setting to use (default depends on platform)
+rabbitmq_repo: "{{ _rabbitmq_default_repo }}"
 
-# List of users which are only permitted to connect to the broker via
-# loopback interface (i.e. localhost). If you wish to allow the default
-# guest user to connect remotely, you need to change this to [].
-rabbitmq_loopback_users:
-  - guest
+# whether to install erlang
+rabbitmq_install_erlang: true
+# which version of erlang to install
+## may need to be adjusted depending on rabbitmq version being installed
+## must include at least major version, but can include minor, patch, etc.
+## e.g. '21', '21.3', '21.3.8', or '21.3.8.5' depending on desired specificity
+rabbitmq_erlang_version: 22
+# erlang repo to use
+rabbitmq_erlang_repo: "{{ _rabbitmq_default_erlang_repo }}"
+# erlang package(s) to be installed
+# note: on debian-based systems, 'erlang-ftp' and 'erlang-tftp' will be exlucded in older erlang versions (<= 22)
+rabbitmq_erlang_packages: "{{ _rabbitmq_default_erlang_packages }}"
 
-rabbitmq_disk_free_limit: ~
-rabbitmq_disk_free_limit_relative: ~
-rabbitmq_vm_memory_high_watermark: ~
+# whether to manage the rabbitmq service (if false, other rabbitmq_service_* settings will be ignored)
+rabbitmq_manage_service: true
+# whether the service should be enabled
+rabbitmq_service_enabled: true
+# state of rabbitmq service ('started' or 'stopped')
+rabbitmq_service_state: started
 
-rabbitmq_ssl_enabled: no
-rabbitmq_ssl_port: 5671
-rabbitmq_ssl_verify: verify_none
-rabbitmq_ssl_fail_if_no_peer_cert: yes
-# ssl key/cert content... will be written to /etc/rabbitmq/ssl if all are set
-rabbitmq_ssl_key_content: ~
-rabbitmq_ssl_cert_content: ~
-rabbitmq_ssl_cacert_content: ~
+# whether to manage rabbitmq configuration (if false, 'rabbitmq_config' and 'rabbitmq_env_config' are ignored)
+rabbitmq_manage_config: true
 
-# rabbitmq-env... if nil, rabbitmq defaults will be used
-rabbitmq_nodename: ~
-rabbitmq_address: ~
-rabbitmq_port: 5672
-rabbitmq_use_longname: ~
-rabbitmq_env_additional: [] # env-file lines
+# dictionary of settings to be rendered in rabbitmq.conf
+rabbitmq_config: {}
+# listeners.tcp.default: 5673  # example
 
-# /etc/default/rabbitmq settings
-rabbitmq_open_file_limit: ~
+# dictionary of environment vars to be rendered in rabbitmq-env.conf
+rabbitmq_env_config: {}
+# NODENAME: hare@{{ ansible_hostname }}  # example
 
-# cluster mode... supports None (disabled), `manual`, or `auto`
-rabbitmq_cluster_mode: ~
-# generic cluster settings
-rabbitmq_erlang_cookie: AnyAlphaNumericStringWillDo
+# erlang cookie content
+## will only be configured during initial installation (before node first started)
+## will be ignored if null or empty
+rabbitmq_erlang_cookie: ~
+# path to erlang cookie
 rabbitmq_erlang_cookie_path: /var/lib/rabbitmq/.erlang.cookie
-rabbitmq_cluster_partition_handling: ignore
-# list of nodes for rabbitmq.config in `auto` mode
-rabbitmq_auto_cluster_nodes: []
-# cluster settings for `manual` mode
-rabbitmq_cluster_master_node: ~
-rabbitmq_cluster_name: "{{ rabbitmq_cluster_master_node }}"
-rabbitmq_cluster_node_type: ~
 
-# management plugin settings
-rabbitmq_management_plugin_enabled: yes
-rabbitmq_management_ssl_enabled: no
-rabbitmq_managment_port: 15672
-rabbitmq_management_ssl_port: 15671
-# rabbitmq_admin_cli_enabled: yes
-# rabbitmq_admin_cli_dir: /usr/local/bin
-
-# list of users... see rabbitmq_user docs for available parameters
-rabbitmq_users: []
-# list of vhosts... rabbitmq_vhost docs for available parameters
-rabbitmq_vhosts: []
-
-# template names
-rabbitmq_config_template: rabbitmq.config.j2
-rabbitmq_env_template: rabbitmq-env.conf.j2
-rabbitmq_default_template: default.rabbitmq-server.j2
+# plugins to install in offline mode
+## helpful during initial installation, especially with peer discovery plugins,
+## as plugins will be enabled before node is first started
+# NOTE: changing this will trigger service restart
+rabbitmq_offline_plugins: []
+# - name: rabbitmq_management
+#   action: enable  # optional, default is 'enable' (other choice is 'disable')

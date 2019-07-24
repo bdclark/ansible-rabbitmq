@@ -3,3 +3,6 @@
   service:
     name: rabbitmq-server
     state: restarted
+  when:
+    - rabbitmq_manage_service | bool
+    - rabbitmq_service_state == 'started'

@@ -1,0 +1,56 @@
+---
+- name: install apt-transport-https
+  apt:
+    name: apt-transport-https
+    state: present
+
+- name: add rabbitmq release signing key
+  apt_key:
+    url: "{{ rabbitmq_gpg_key_url }}"
+
+- name: add erlang apt repository
+  apt_repository:
+    filename: rabbitmq-erlang
+    repo: "{{ rabbitmq_erlang_repo }}"
+    update_cache: false
+  register: _rabbitmq_erlang_repository
+  when: rabbitmq_install_erlang | bool
+
+- name: add rabbitmq apt repository
+  apt_repository:
+    filename: rabbitmq-server
+    repo: "{{ rabbitmq_repo }}"
+    update_cache: false
+  register: _rabbitmq_server_repository
+
+- name: update apt cache
+  apt:  # noqa 503
+    update_cache: true
+  when: _rabbitmq_erlang_repository.changed | bool or _rabbitmq_server_repository.changed | bool
+
+- block:
+    - name: apt pinning config for erlang packages
+      copy:
+        content: |
+          # Preference file to avoid erlang upgrades and thus missmatches between erlang and rabbitmq
+          # See https://www.rabbitmq.com/which-erlang.html
+          Package: erlang*
+          Pin: version 1:{{ rabbitmq_erlang_version }}*
+          Pin-Priority: 1000
+        dest: /etc/apt/preferences.d/erlang
+
+    - name: update erlang package list for older erlang versions
+      set_fact:
+        rabbitmq_erlang_packages: "{{ rabbitmq_erlang_packages | difference(['erlang-ftp', 'erlang-tftp']) }}"
+      when: rabbitmq_erlang_version is version('22', '<=')
+
+    - name: install erlang packages
+      apt:
+        name: "{{ rabbitmq_erlang_packages }}"
+        state: present
+  when: rabbitmq_install_erlang | bool
+
+- name: install rabbitmq package
+  apt:
+    name: rabbitmq-server={{ rabbitmq_version }}*
+    state: present

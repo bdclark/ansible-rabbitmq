@@ -11,21 +11,21 @@
     rabbitmq_current_nodename: "{{ rmqctl_node.stdout | replace(\"'\", '') }}"
 
 - block:
-  - name: clustering | stop_app
-    command: rabbitmqctl stop_app
+    - name: clustering | stop_app
+      command: rabbitmqctl stop_app
 
-  - name: clustering | join_cluster
-    command: rabbitmqctl join_cluster {{ rabbitmq_cluster_master_node }} {{ '--ram' if rabbitmq_cluster_node_type == 'ram' else '' }}
-    register: rmq_join_cluster_result
-    ignore_errors: yes
+    - name: clustering | join_cluster
+      command: rabbitmqctl join_cluster {{ rabbitmq_cluster_master_node }} {{ '--ram' if rabbitmq_cluster_node_type == 'ram' else '' }}
+      register: rmq_join_cluster_result
+      ignore_errors: true
 
-  - name: clustering | start_app
-    command: rabbitmqctl start_app
+    - name: clustering | start_app
+      command: rabbitmqctl start_app
 
-  - name: clustering | fail if join_cluster failed
-    fail:
-      msg: failed to join cluster
-    when: rmq_join_cluster_result.rc !=0
+    - name: clustering | fail if join_cluster failed
+      fail:
+        msg: failed to join cluster
+      when: rmq_join_cluster_result.rc !=0
 
   when: not (rabbitmq_current_nodename == rabbitmq_cluster_master_node
       or rabbitmq_current_nodename in rabbitmq_current_running_nodes and rabbitmq_current_cluster_name == rabbitmq_cluster_name)

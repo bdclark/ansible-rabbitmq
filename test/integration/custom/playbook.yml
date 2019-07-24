@@ -1,0 +1,23 @@
+---
+- hosts: all
+  become: true
+  vars:
+    rabbitmq_version: 3.7.8
+    rabbitmq_erlang_version: 21.3.8
+    rabbitmq_config:
+      listeners.tcp.default: 5673
+    rabbitmq_env_config:
+      NODENAME: hare@{{ ansible_hostname }}
+    rabbitmq_offline_plugins:
+      - name: rabbitmq_management
+      - name: rabbitmq_peer_discovery_consul
+      - name: rabbitmq_peer_discovery_etcd
+        action: disable
+    rabbitmq_erlang_cookie: AnyStringWillDo
+  roles:
+    - role: rabbitmq
+  tasks:
+    - name: install test dependencies
+      package:
+        name: net-tools
+        state: present

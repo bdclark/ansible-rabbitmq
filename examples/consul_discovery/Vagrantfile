@@ -1,0 +1,56 @@
+# Example cluster using Consul peer discovery
+
+Vagrant.configure('2') do |config|
+  config.vm.box = 'bento/ubuntu-18.04'
+
+  # consul server
+  CONSUL_IP = '192.168.77.20'.freeze
+  config.vm.define 'consul' do |machine|
+    machine.vm.hostname = 'consul'
+    machine.vm.network 'private_network', ip: CONSUL_IP
+    machine.vm.network 'forwarded_port', guest: 8500, host: 8500, host_ip: '127.0.0.1'
+    machine.vm.provision 'docker' do |d|
+      d.run 'consul',
+            cmd: 'agent -dev -bind 192.168.77.20 -client 0.0.0.0',
+            args: '--network=host'
+    end
+  end
+
+  # rabbitmq nodes
+  NUM_NODES = 3
+  nodes = []
+
+  (1..NUM_NODES).each do |id|
+    node = "rabbit#{id}"
+    nodes << node
+    ip_addr = "192.168.77.#{20 + id}"
+
+    config.vm.define node do |machine|
+      machine.vm.hostname = node
+      machine.vm.network 'private_network', ip: ip_addr
+      machine.vm.network 'forwarded_port', guest: 15_672, host: "1567#{id}", host_ip: '127.0.0.1'
+
+      machine.vm.provision 'docker' do |d|
+        d.run 'consul',
+              cmd: "agent -bind #{ip_addr} -retry-join #{CONSUL_IP}",
+              args: '--network=host'
+      end
+
+      # Execute Ansible provisioner once, when all the machines are up.
+      if id == NUM_NODES
+        machine.vm.provision :ansible do |ansible|
+          ansible.groups = {
+            'rabbitmq': nodes
+          }
+          ansible.limit = 'all'
+          ansible.config_file = '../ansible.cfg'
+          ansible.playbook = 'playbook.yml'
+          ansible.extra_vars = {
+            rabbitmq_consul_svc_addr: ip_addr
+          }
+          ansible.raw_arguments = %w[--diff]
+        end
+      end
+    end
+  end
+end

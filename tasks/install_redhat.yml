@@ -1,0 +1,28 @@
+---
+- block:
+    - name: add erlang yum repository
+      yum_repository:
+        name: rabbitmq-erlang
+        description: RabbitMQ Erlang Repository
+        baseurl: "{{ rabbitmq_erlang_repo }}"
+        gpgkey: "{{ rabbitmq_gpg_key_url }}"
+        gpgcheck: false
+
+    - name: install erlang packages
+      yum:
+        name: "{{ rabbitmq_erlang_packages }}"
+        state: present
+  when: rabbitmq_install_erlang | bool
+
+- name: add rabbitmq yum repository
+  yum_repository:
+    name: rabbitmq-server
+    description: RabbitMQ Repository
+    baseurl: "{{ rabbitmq_repo }}"
+    gpgkey: "{{ rabbitmq_gpg_key_url }}"
+    gpgcheck: true
+
+- name: install rabbitmq package
+  yum:
+    name: rabbitmq-server-{{ rabbitmq_version }}*
+    state: present
