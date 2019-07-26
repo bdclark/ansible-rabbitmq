@@ -11,7 +11,6 @@ end
 
 describe service('rabbitmq-server') do
   it { should be_running }
-  it { should be_enabled }
 end
 
 describe port('5673') do
