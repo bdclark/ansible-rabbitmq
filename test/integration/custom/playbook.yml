@@ -27,4 +27,4 @@
 
     - name: wait for rabbitmq
       wait_for:
-        port: 5672
+        port: 5673
