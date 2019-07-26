@@ -31,5 +31,8 @@ script:
   - yamllint .
   - ansible-lint -v . test/integration/default/playbook.yml test/integration/custom/playbook.yml
   - ansible --version
+  # - bundle exec kitchen list
+  # - bundle exec kitchen test
+  - bundle exec kitchen converge default-ubuntu
+  - bundle exec kitchen verify default-ubuntu
   - bundle exec kitchen list
-  - bundle exec kitchen test
