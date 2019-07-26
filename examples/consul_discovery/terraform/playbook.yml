@@ -1,0 +1,32 @@
+---
+- hosts: all
+  become: true
+  vars:
+    rabbitmq_erlang_cookie: 'abcd1234'
+    rabbitmq_env_config:
+      USE_LONGNAME: 'true'
+    rabbitmq_config:
+      default_user: guest
+      default_pass: guest
+      loopback_users: none
+      cluster_formation.peer_discovery_backend: rabbit_peer_discovery_consul
+      cluster_formation.consul.svc_addr_auto: 'true'
+      cluster_formation.consul.svc_addr_use_nodename: 'true'
+      cluster_formation.consul.use_longname: 'true'
+      cluster_formation.consul.lock_prefix: service/rabbitmq/discovery
+      cluster_partition_handling: pause_minority
+      log.file.level: debug
+    rabbitmq_offline_plugins:
+      - name: rabbitmq_management
+      - name: rabbitmq_peer_discovery_consul
+  tasks:
+    - name: install rabbitmq
+      import_role:
+        name: rabbitmq
+
+    - name: flush handlers
+      meta: flush_handlers
+
+    - name: wait for rabbitmq
+      wait_for:
+        port: 5672

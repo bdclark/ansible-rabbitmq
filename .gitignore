@@ -21,3 +21,8 @@ bin/*
 .kitchen/*
 .kitchen.local.yml
 .kitchen.list.yml
+
+# Terraform
+.terraform*
+terraform.tfvars
+terraform.tfstate*
