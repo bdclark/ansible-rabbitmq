@@ -25,6 +25,7 @@
 - name: get installed packages
   shell: "{{ _rabbitmq_package_list_cmd }}"  # noqa 305
   changed_when: false
+  check_mode: false
   register: _rabbitmq_installed_packages
 
 - name: mask rabbitmq-server service unit (before initial install)
